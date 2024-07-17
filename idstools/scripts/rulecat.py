@@ -340,6 +340,21 @@ class Fetch(object):
         files[basename] = open(filename, "rb").read()
         return files
 
+def load_sids(filename):
+    """Load SIDs from a file."""
+    sids = set()
+    with open(filename) as fileobj:
+        for line in fileobj:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            matcher = parse_rule_match(line)
+            if isinstance(matcher, IdRuleMatcher):
+                sids.add(matcher.signatureId)
+            else:
+                logger.warning(f"Unsupported matcher: {line}")
+    return sids
+
 def parse_rule_match(match):
     matcher = AllRuleMatcher.parse(match)
     if matcher:
@@ -828,15 +843,15 @@ def main():
 
     file_tracker = FileTracker()
 
-    disable_matchers = []
-    enable_matchers = []
+    disable_sids = set()
+    enable_sids = set()
     modify_filters = []
     drop_filters = []
 
     if args.disable and os.path.exists(args.disable):
-        disable_matchers += load_matchers(args.disable)
+        disable_sids = load_sids(args.disable)
     if args.enable and os.path.exists(args.enable):
-        enable_matchers += load_matchers(args.enable)
+        enable_sids = load_sids(args.enable)
     if args.modify and os.path.exists(args.modify):
         modify_filters += load_filters(args.modify)
     if args.drop and os.path.exists(args.drop):
@@ -873,16 +888,15 @@ def main():
     # rules that are re-enabled to meet flowbit requirements.
     disabled_rules = []
 
-    for key, rule in rulemap.items():
-
-        for matcher in disable_matchers:
-            if rule.enabled and matcher.match(rule):
+    for rule in rulemap.values():
+        if rule.sid in disable_sids:
+            if rule.enabled:
                 logger.debug("Disabling: %s" % (rule.brief()))
                 rule.enabled = False
                 disabled_rules.append(rule)
 
-        for matcher in enable_matchers:
-            if not rule.enabled and matcher.match(rule):
+        if rule.sid in enable_sids:
+            if not rule.enabled:
                 logger.debug("Enabling: %s" % (rule.brief()))
                 rule.enabled = True
                 enable_count += 1
