@@ -828,15 +828,29 @@ def main():
 
     file_tracker = FileTracker()
 
-    disable_matchers = []
-    enable_matchers = []
+    disable_sids = set()
+    enable_sids = set()
+    disable_other_matchers = []
+    enable_other_matchers = []
     modify_filters = []
     drop_filters = []
 
     if args.disable and os.path.exists(args.disable):
-        disable_matchers += load_matchers(args.disable)
+        disable_matchers = load_matchers(args.disable)
+        for matcher in disable_matchers:
+            if isinstance(matcher, IdRuleMatcher):
+                disable_sids.add(matcher.signatureId)
+            else:
+                disable_other_matchers.append(matcher)
+
     if args.enable and os.path.exists(args.enable):
-        enable_matchers += load_matchers(args.enable)
+        enable_matchers = load_matchers(args.enable)
+        for matcher in enable_matchers:
+            if isinstance(matcher, IdRuleMatcher):
+                enable_sids.add(matcher.signatureId)
+            else:
+                enable_other_matchers.append(matcher)
+
     if args.modify and os.path.exists(args.modify):
         modify_filters += load_filters(args.modify)
     if args.drop and os.path.exists(args.drop):
@@ -873,19 +887,35 @@ def main():
     # rules that are re-enabled to meet flowbit requirements.
     disabled_rules = []
 
-    for key, rule in rulemap.items():
+    for rule in rulemap.values():
+        # Check for disabling matchers first
 
-        for matcher in disable_matchers:
-            if rule.enabled and matcher.match(rule):
+        if rule.sid in disable_sids:
+            if rule.enabled:
                 logger.debug("Disabling: %s" % (rule.brief()))
                 rule.enabled = False
                 disabled_rules.append(rule)
+        else:
+            for matcher in disable_other_matchers:
+                if rule.enabled and matcher.match(rule):
+                    logger.debug("Disabling: %s" % (rule.brief()))
+                    rule.enabled = False
+                    disabled_rules.append(rule)
+                    break  # No need to check other disable matchers if already disabled
 
-        for matcher in enable_matchers:
-            if not rule.enabled and matcher.match(rule):
+        # Check for enabling matchers
+        if rule.sid in enable_sids:
+            if not rule.enabled:
                 logger.debug("Enabling: %s" % (rule.brief()))
                 rule.enabled = True
                 enable_count += 1
+        else:
+            for matcher in enable_other_matchers:
+                if not rule.enabled and matcher.match(rule):
+                    logger.debug("Enabling: %s" % (rule.brief()))
+                    rule.enabled = True
+                    enable_count += 1
+                    break  # No need to check other enable matchers if already enabled
 
         for filter in drop_filters:
             if filter.match(rule):
