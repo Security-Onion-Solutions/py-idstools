@@ -263,7 +263,7 @@ class Fetch(object):
                 open(tmp_filename, "rb").read()).hexdigest().strip()
             remote_checksum_buf = io.BytesIO()
             logger.info("Checking %s." % (checksum_url))
-            idstools.net.get(checksum_url, remote_checksum_buf)
+            idstools.net.get(checksum_url, remote_checksum_buf, insecure=self.args.insecure)
             remote_checksum = remote_checksum_buf.getvalue().decode().strip()
             logger.debug("Local checksum=|%s|; remote checksum=|%s|" % (
                 local_checksum, remote_checksum))
@@ -317,7 +317,8 @@ class Fetch(object):
         idstools.net.get(
             url,
             open(tmp_filename, "wb"),
-            progress_hook=self.progress_hook if not self.args.quiet else None)
+            progress_hook=self.progress_hook if not self.args.quiet else None,
+            insecure=self.args.insecure)
         if not self.args.quiet:
             self.progress_hook_finish()
         logger.info("Done.")
@@ -773,6 +774,8 @@ def main():
                         help="Command to test Suricata configuration")
     parser.add_argument("-V", "--version", action="store_true", default=False,
                         help="Display version")
+    parser.add_argument("--insecure", action="store_true", default=False,
+                        help="Skip SSL verification (INSECURE)")
 
     args = parser.parse_args()
 
@@ -788,6 +791,9 @@ def main():
     logger.debug("This is idstools-rulecat version %s; Python: %s" % (
         idstools.version,
         sys.version.replace("\n", "- ")))
+        
+    if args.insecure:
+        logger.warning("SSL verification disabled. This is INSECURE!")
 
     if args.dump_sample_configs:
         return dump_sample_configs()

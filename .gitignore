@@ -6,3 +6,44 @@ build
 _work
 /.cache
 /.tox
+CLAUDE.md
+
+# Virtual environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Python distribution / packaging
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+.hypothesis/
+.coverage.*
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo

@@ -111,7 +111,12 @@ class TestFetch(unittest.TestCase):
         """Test that we detect when the checksum are the same. This is mainly
         to catch issues between Python 2 and 3.
         """
-        fetch = rulecat.Fetch(None)
+        # Create a mock args object with insecure set to False
+        class MockArgs:
+            def __init__(self):
+                self.insecure = False
+        
+        fetch = rulecat.Fetch(MockArgs())
         url = "file://%s/emerging.rules.tar.gz" % (
             os.path.dirname(os.path.realpath(__file__)))
         local_file = "%s/emerging.rules.tar.gz" % (
