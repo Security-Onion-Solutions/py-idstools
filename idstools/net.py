@@ -27,23 +27,26 @@
 
 try:
     # Python 3.3...
-    from urllib.request import urlopen
+    from urllib.request import urlopen, Request
     from urllib.error import HTTPError
+    import ssl
 except ImportError:
     # Python 2.6, 2.7.
-    from urllib2 import urlopen
+    from urllib2 import urlopen, Request
     from urllib2 import HTTPError
+    import ssl
 
 # Number of bytes to read at a time in a GET request.
 GET_BLOCK_SIZE = 8192
 
-def get(url, fileobj, progress_hook=None):
+def get(url, fileobj, progress_hook=None, insecure=False):
     """ Perform a GET request against a URL writing the contents into
     the provideded file like object.
 
     :param url: The URL to fetch
     :param fileobj: The fileobj to write the content to
     :param progress_hook: The function to call with progress updates
+    :param insecure: If True, SSL certificate verification will be disabled (INSECURE)
 
     :returns: Returns a tuple containing the number of bytes read and
       the result of the info() function from urllib2.urlopen().
@@ -51,8 +54,14 @@ def get(url, fileobj, progress_hook=None):
     :raises: Exceptions from urllib2.urlopen() and writing to the
       provided fileobj may occur.
     """
-
-    remote = urlopen(url)
+    
+    if insecure and url.lower().startswith("https"):
+        # Create a context that doesn't verify SSL certificates
+        context = ssl._create_unverified_context()
+        remote = urlopen(url, context=context)
+    else:
+        remote = urlopen(url)
+        
     info = remote.info()
     try:
         content_length = int(info["content-length"])
